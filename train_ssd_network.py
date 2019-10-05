@@ -60,28 +60,10 @@ def main(_):
 
         # Get SSD network and its anchors.
         ssd_class = nets_factory.get_network(FLAGS.model_name)
-        print("##############################################################")
-        print("## ssd_class: ", ssd_class)
-        print("## ssd_class param: ", ssd_class.default_params)
         ssd_params = ssd_class.default_params._replace(num_classes=10)
-        print("##############################################################")
-        print("### ssd_params: ", ssd_params)
         ssd_net = ssd_class(ssd_params)
-        print("##############################################################")
-        print("#### ssd_net: ", type(ssd_net), ssd_net)
         ssd_shape = ssd_net.params.img_shape
         ssd_anchors = ssd_net.anchors(ssd_shape)    # a list, each list contains 4 elements representing y, x, h, w
-        print("##############################################################")
-        print(type(ssd_anchors))
-        l1, l2, l3, l4, l5, l6 = ssd_anchors
-        y, x, h, w = l5
-        print("##############################################################")
-        print(type(y), y.shape, y)
-        print(type(x), x.shape, x)
-        print(type(h), h.shape, h)
-        print(type(w), w.shape, w)
-        print(type(l6))
-        print("##############################################################")
 
         # =================================================================== #
         # Create a dataset provider and batches.
