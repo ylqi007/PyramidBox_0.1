@@ -16,3 +16,9 @@ parse_image_dataset = raw_image_dataset.map(_parse_example_function)
 ```
 The elements in `raw_dataset` are serialized string;
 then parse each example proto to get parsed example.
+
+20191004: add handle_features part
+
+20191005: todo
+1. preprocessing images
+2. how to batch images

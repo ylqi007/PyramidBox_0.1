@@ -90,7 +90,16 @@ def get_dataset(split_name, dataset_dir, file_pattern, items_to_descriptions):
         image_features['image/raw_data'] = image_decode
         return image_features
 
-    parsed_image_dataset = raw_image_dataset.map(_parse_example_function)
+    def _parse_feature_function(_image_features):
+        image_features = {
+            'image': _image_features['image/raw_data'],
+            'shape': _image_features['image/shape'],
+            'object/label': _image_features['image/object/bbox/label'],
+            'object/bbox': _image_features['image/object/bbox/xmin']
+        }
+        return image_features
+
+    parsed_image_dataset = raw_image_dataset.map(_parse_example_function).map(_parse_feature_function)
 
     return parsed_image_dataset
 
