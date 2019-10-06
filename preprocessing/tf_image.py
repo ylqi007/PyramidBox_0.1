@@ -272,8 +272,8 @@ def resize_image(image, size,
     with tf.name_scope('resize_image'):
         height, width, channels = _ImageDimensions(image)
         image = tf.expand_dims(image, 0)
-        image = tf.image.resize_images(image, size,
-                                       method, align_corners)
+        image = tf.image.resize(image, size,
+                                method, align_corners)
         image = tf.reshape(image, tf.stack([size[0], size[1], channels]))
         return image
 

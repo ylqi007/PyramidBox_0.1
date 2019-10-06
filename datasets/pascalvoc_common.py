@@ -92,35 +92,15 @@ def get_dataset(split_name, dataset_dir, file_pattern, items_to_descriptions):
     m_dataset = raw_image_dataset.map(_parse_example_function)
 
     def _parse_feature_function(_image_features):
-        # _image_features['image/object/bbox/label'] = tf.sparse.to_dense(_image_features['image/object/bbox/label'],
-        #                                                                 _image_features['image/object/bbox/label'].values)
-        # _image_features['image/object/bbox/ymin'] = tf.sparse.to_dense(_image_features['image/object/bbox/ymin'],
-        #                                                                 _image_features['image/object/bbox/ymin'].values)
-        # _image_features['image/object/bbox/xmin'] = tf.sparse.to_dense(_image_features['image/object/bbox/xmin'],
-        #                                                                 _image_features['image/object/bbox/xmin'].values)
-        # _image_features['image/object/bbox/ymax'] = tf.sparse.to_dense(_image_features['image/object/bbox/ymax'],
-        #                                                                 _image_features[
-        #                                                                     'image/object/bbox/ymax'].values)
-        # _image_features['image/object/bbox/xmax'] = tf.sparse.to_dense(_image_features['image/object/bbox/xmax'],
-        #                                                                 _image_features[
-        #                                                                     'image/object/bbox/xmax'].values)
-        print('$$$$: ', _image_features['image/object/bbox/xmax'])
-        # image_features = {
-        #     'image': slim.tfexample_decoder.Image('image/raw_data', 'image/format'),
-        #     # 'image': _image_features['image/raw_data'],
-        #     'shape': _image_features['image/shape'],
-        #     'object/label': _image_features['image/object/bbox/label'],
-        #     'object/bbox': tf.stack(_image_features['image/object/bbox/xmin'],
-        #                             _image_features['image/object/bbox/ymin'])
-        # }
         image_features = {
-            'image': slim.tfexample_decoder.Image('image/raw_data', 'image/format'),
-            'shape': slim.tfexample_decoder.Tensor('image/shape'),
-            'object/bbox': slim.tfexample_decoder.BoundingBox(
-                ['ymin', 'xmin', 'ymax', 'xmax'], 'image/object/bbox/'),
-            'object/label': slim.tfexample_decoder.Tensor('image/object/bbox/label'),
+            'image': _image_features['image/raw_data'],
+            'shape': _image_features['image/shape'],
+            'object/bbox': [tf.sparse.to_dense(_image_features['image/object/bbox/ymin']),
+                            tf.sparse.to_dense(_image_features['image/object/bbox/xmin']),
+                            tf.sparse.to_dense(_image_features['image/object/bbox/ymax']),
+                            tf.sparse.to_dense(_image_features['image/object/bbox/ymax'])],
+            'object/label': tf.sparse.to_dense(_image_features['image/object/bbox/label']),
         }
-        print("####################################: image_features: ", image_features)
         return image_features
 
     parsed_image_dataset = m_dataset.map(_parse_feature_function)

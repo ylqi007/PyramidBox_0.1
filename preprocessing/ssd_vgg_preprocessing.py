@@ -95,7 +95,7 @@ def tf_summary_image(image, bboxes, name='image', unwhitened=False):
     image = tf.expand_dims(image, 0)
     bboxes = tf.expand_dims(bboxes, 0)
     image_with_box = tf.image.draw_bounding_boxes(image, bboxes)
-    tf.summary.image(name, image_with_box)
+    tf.compat.v1.summary.image(name, image_with_box)
 
 
 def apply_with_random_selector(x, func, num_cases):
@@ -108,7 +108,7 @@ def apply_with_random_selector(x, func, num_cases):
         The result of func(x, sel), where func receives the value of the
         selector as a python integer, but sel is sampled dynamically.
     """
-    sel = tf.random_uniform([], maxval=num_cases, dtype=tf.int32)
+    sel = tf.random.uniform([], maxval=num_cases, dtype=tf.int32)
     # Pass the real x only to one of the func calls.
     return control_flow_ops.merge([
             func(control_flow_ops.switch(x, tf.equal(sel, case))[1], case)

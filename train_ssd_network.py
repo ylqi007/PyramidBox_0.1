@@ -86,36 +86,37 @@ def main(_):
             iterator = tf.compat.v1.data.make_one_shot_iterator(dataset)
             image_example = iterator.get_next()
             image = image_example['image']
+            print('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
+            print("image: ", image)
             shape = image_example['shape']
+            print("shape: ", shape)
             glabels = image_example['object/label']
+            print("glabels: ", glabels)
             gbboxes = image_example['object/bbox']
+            print("### gbboxes: ", gbboxes)
+            gbboxes = tf.transpose(gbboxes)
+            print("$$$ gbboxes: ", gbboxes)
 
-            print("#### image: ", image)
-            image = tf.convert_to_tensor(image)
-            print("###### image: ", image)
             # Pre-processing image, labels and bboxes.
-            # image, glabels, gbboxes = image_preprocessing_fn(image, glabels, gbboxes,
-            #                                                  out_shape=ssd_shape,
-            #                                                  data_format=DATA_FORMAT)
+            image, glabels, gbboxes = image_preprocessing_fn(image, glabels, gbboxes,
+                                                             out_shape=ssd_shape,
+                                                             data_format=DATA_FORMAT)
             print("##############################################################")
-            print("## image: ", image)
+            print("$$ After preprocess_fn image: ", image)
+            print("$$ After preprocess_fn glabels: ", glabels)
+            print("$$ After preprocess_fn gbboxes: ", gbboxes)
+            print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
 
         i = 0
         with tf.compat.v1.Session() as sess:
             try:
                 # while True:
                 for _ in range(1):
-                    test = sess.run(image)  # after sess, test is <class 'numpy.ndarray'>
+                    test = sess.run(gbboxes)  # after sess, test is <class 'numpy.ndarray'>
 
                     print(type(test), test.shape)
                     print("##", i, test)
                     i = i + 1
-                # with tf.device('/cpu:0'):
-                #     # for _ in range(10):
-                #     while True:
-                #         image = sess.run(image_example)
-                #         print("##", i, image)
-                #         i = i + 1
             except tf.errors.OutOfRangeError:
                 print("End! totally: ", i)
 
