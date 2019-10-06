@@ -87,15 +87,9 @@ def main(_):
             image_example = iterator.get_next()
             image = image_example['image']
             print('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
-            print("image: ", image)
             shape = image_example['shape']
-            print("shape: ", shape)
             glabels = image_example['object/label']
-            print("glabels: ", glabels)
-            gbboxes = image_example['object/bbox']
-            print("### gbboxes: ", gbboxes)
-            gbboxes = tf.transpose(gbboxes)
-            print("$$$ gbboxes: ", gbboxes)
+            gbboxes = tf.transpose(image_example['object/bbox'])
 
             # Pre-processing image, labels and bboxes.
             image, glabels, gbboxes = image_preprocessing_fn(image, glabels, gbboxes,
