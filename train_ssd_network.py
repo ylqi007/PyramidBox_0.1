@@ -1,9 +1,11 @@
 import tensorflow as tf
 from datasets import dataset_factory
 from nets import nets_factory
+from preprocessing import preprocessing_factory
 
 slim = tf.contrib.slim
 
+DATA_FORMAT = 'NCHW'
 
 # =========================================================================== #
 # Dataset Flags.
@@ -65,6 +67,11 @@ def main(_):
         ssd_shape = ssd_net.params.img_shape
         ssd_anchors = ssd_net.anchors(ssd_shape)    # a list, each list contains 4 elements representing y, x, h, w
 
+        # Select the preprocessing function.
+        preprocessing_name = FLAGS.preprocessing_name or FLAGS.model_name
+        image_preprocessing_fn = preprocessing_factory.get_preprocessing(preprocessing_name,
+                                                                         is_training=True)
+
         # =================================================================== #
         # Create a dataset provider and batches.
         # =================================================================== #
@@ -83,14 +90,24 @@ def main(_):
             glabels = image_example['object/label']
             gbboxes = image_example['object/bbox']
 
+            print("#### image: ", image)
+            image = tf.convert_to_tensor(image)
+            print("###### image: ", image)
+            # Pre-processing image, labels and bboxes.
+            # image, glabels, gbboxes = image_preprocessing_fn(image, glabels, gbboxes,
+            #                                                  out_shape=ssd_shape,
+            #                                                  data_format=DATA_FORMAT)
+            print("##############################################################")
+            print("## image: ", image)
+
         i = 0
         with tf.compat.v1.Session() as sess:
             try:
                 # while True:
                 for _ in range(1):
-                    test = sess.run(shape)  # after sess, test is <class 'numpy.ndarray'>
+                    test = sess.run(image)  # after sess, test is <class 'numpy.ndarray'>
 
-                    print(type(test))
+                    print(type(test), test.shape)
                     print("##", i, test)
                     i = i + 1
                 # with tf.device('/cpu:0'):
