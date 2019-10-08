@@ -90,6 +90,12 @@ def main(_):
             shape = image_example['shape']
             glabels = image_example['object/label']
             gbboxes = tf.transpose(image_example['object/bbox'])
+            print('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
+            print('## image: ', image)
+            print('## shape: ', shape)
+            print('## glabels: ', glabels)
+            print('## gbboxes: ', gbboxes)
+            print("##############################################################")
 
             # Pre-processing image, labels and bboxes.
             image, glabels, gbboxes = image_preprocessing_fn(image, glabels, gbboxes,
