@@ -55,6 +55,7 @@ def main(_):
     if not FLAGS.dataset_dir:
         raise ValueError('You must supply the dataset directory with --dataset_dir')
 
+    tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.DEBUG)
     with tf.Graph().as_default():
         # Create global step.
         with tf.device('/cpu:0'):
@@ -86,7 +87,6 @@ def main(_):
             iterator = tf.compat.v1.data.make_one_shot_iterator(dataset)
             image_example = iterator.get_next()
             image = image_example['image']
-            print('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
             shape = image_example['shape']
             glabels = image_example['object/label']
             gbboxes = tf.transpose(image_example['object/bbox'])
@@ -95,7 +95,6 @@ def main(_):
             print('## shape: ', shape)
             print('## glabels: ', glabels)
             print('## gbboxes: ', gbboxes)
-            print("##############################################################")
 
             # Pre-processing image, labels and bboxes.
             image, glabels, gbboxes = image_preprocessing_fn(image, glabels, gbboxes,
@@ -105,7 +104,6 @@ def main(_):
             print("$$ After preprocess_fn image: ", image)
             print("$$ After preprocess_fn glabels: ", glabels)
             print("$$ After preprocess_fn gbboxes: ", gbboxes)
-            print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
 
         i = 0
         with tf.compat.v1.Session() as sess:
