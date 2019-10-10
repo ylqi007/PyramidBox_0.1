@@ -55,6 +55,7 @@ def main(_):
     if not FLAGS.dataset_dir:
         raise ValueError('You must supply the dataset directory with --dataset_dir')
 
+    tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.DEBUG)
     with tf.Graph().as_default():
         # Create global step.
         with tf.device('/cpu:0'):
@@ -94,7 +95,6 @@ def main(_):
             print('## shape: ', shape)
             print('## glabels: ', glabels)
             print('## gbboxes: ', gbboxes)
-            print("##############################################################")
 
             # Pre-processing image, labels and bboxes.
             image, glabels, gbboxes = image_preprocessing_fn(image, glabels, gbboxes,
