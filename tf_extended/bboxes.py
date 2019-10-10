@@ -141,6 +141,9 @@ def bboxes_resize(bbox_ref, bboxes, name=None):
     assuming that the latter is [0, 0, 1, 1] after transform. Useful for
     updating a collection of boxes after cropping an image.
     """
+    print("********************************************************************")
+    print("***** bboxes_resize *****")
+    print("********************************************************************")
     # Bboxes is dictionary.
     if isinstance(bboxes, dict):
         with tf.name_scope(name, 'bboxes_resize_dict'):
@@ -153,7 +156,10 @@ def bboxes_resize(bbox_ref, bboxes, name=None):
     with tf.name_scope(name, 'bboxes_resize'):
         # Translate.
         v = tf.stack([bbox_ref[0], bbox_ref[1], bbox_ref[0], bbox_ref[1]])
+        print("v: ", type(v), v)
+        print("bboxes: ", type(bboxes), bboxes)
         bboxes = bboxes - v
+        print("bboxes: ", type(bboxes), bboxes)
         # Scale.
         s = tf.stack([bbox_ref[2] - bbox_ref[0],
                       bbox_ref[3] - bbox_ref[1],

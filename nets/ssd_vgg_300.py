@@ -47,6 +47,8 @@ from collections import namedtuple
 import numpy as np
 import tensorflow as tf
 
+from nets import ssd_common
+
 
 slim = tf.contrib.slim
 

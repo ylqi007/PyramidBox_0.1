@@ -86,7 +86,6 @@ def main(_):
             iterator = tf.compat.v1.data.make_one_shot_iterator(dataset)
             image_example = iterator.get_next()
             image = image_example['image']
-            print('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
             shape = image_example['shape']
             glabels = image_example['object/label']
             gbboxes = tf.transpose(image_example['object/bbox'])
@@ -102,9 +101,23 @@ def main(_):
                                                              out_shape=ssd_shape,
                                                              data_format=DATA_FORMAT)
             print("##############################################################")
-            print("$$ After preprocess_fn image: ", image)
-            print("$$ After preprocess_fn glabels: ", glabels)
-            print("$$ After preprocess_fn gbboxes: ", gbboxes)
+            print("$$ After preprocess_fn image: ", image)      # shape=(3, 300, 300), dtype=float32
+            print("$$ After preprocess_fn glabels: ", glabels)  # shape=(?,), dtype=int64
+            print("$$ After preprocess_fn gbboxes: ", gbboxes)  # shape=(?, 4), dtype=float32
+            print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+
+            # Encode groundtruth labels and bboxes.
+            print("##############################################################")
+            print("$$ Before encoding_fn glabels: ", glabels)   # shape=(?,), dtype=int64
+            print("$$ Before encoding_fn gbboxes: ", gbboxes)   # shape=(?, 4), dtype=float32
+            print("$$ Before encoding_fn ssd_anchors: ", type(ssd_anchors), len(ssd_anchors))
+            print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+            gclasses, glocalisations, gscores = ssd_net.bboxes_encode(glabels, gbboxes, ssd_anchors)
+            batch_shape = [1] + [len(ssd_anchors)] * 3
+            print("##############################################################")
+            print("$$ After Encode groundtruth labels and bboxes -- gclasses: ", gclasses)
+            print("$$ After Encode groundtruth labels and bboxes -- glocalisations: ", glocalisations)
+            print("$$ After Encode groundtruth labels and bboxes -- gscores: ", gscores)
             print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
 
         i = 0

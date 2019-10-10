@@ -93,12 +93,8 @@ def tf_summary_image(image, bboxes, name='image', unwhitened=False):
     if unwhitened:
         image = tf_image_unwhitened(image)
     image = tf.expand_dims(image, 0)
-    print('########### tf_summary_image ##########')
-    print('image: ', image)
     bboxes = tf.expand_dims(bboxes, 0)
-    print('bboxes: ', bboxes)
     image_with_box = tf.image.draw_bounding_boxes(image, bboxes)
-    print('image_with_box: ', image_with_box)
     tf.compat.v1.summary.image(name, image_with_box)
 
 
@@ -212,28 +208,19 @@ def distorted_bounding_box_crop(image,
                 area_range=area_range,
                 max_attempts=max_attempts,
                 use_image_if_no_bounding_boxes=True)
-        distort_bbox = distort_bbox[0, 0]
-        print('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
-        print('bbox_begin: ', bbox_begin)
-        print('bbox_size: ', bbox_size)
-        print('distort_bbox: ', distort_bbox)
+        distort_bbox = distort_bbox[0, 0]   # shape=(4,)
 
         # Crop the image to the specified bounding box.
         cropped_image = tf.slice(image, bbox_begin, bbox_size)
         # Restore the shape since the dynamic slice loses 3rd dimension.
         cropped_image.set_shape([None, None, 3])
 
-        print('&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&')
-        print(type(bboxes), bboxes, bboxes.shape)
         # Update bounding boxes: resize and filter out.
-        bboxes = tfe.bboxes_resize(distort_bbox, bboxes)
-        print('&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&')
-        print(type(bboxes), bboxes, bboxes.shape)
+        bboxes = tfe.bboxes_resize(distort_bbox, bboxes)    # This bboxes refers distort_box.
+
         labels, bboxes = tfe.bboxes_filter_overlap(labels, bboxes,
                                                    threshold=BBOX_CROP_OVERLAP,
                                                    assign_negative=False)
-        print('&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&')
-        print(cropped_image, labels, bboxes, distort_bbox)
         return cropped_image, labels, bboxes, distort_bbox
 
 
@@ -255,10 +242,9 @@ def preprocess_for_train(image, labels, bboxes,
     """
     fast_mode = False
     with tf.name_scope(scope, 'ssd_preprocessing_train', [image, labels, bboxes]):
-        print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-        print(type(image), image.dtype)
         if image.get_shape().ndims != 3:
             raise ValueError('Input must be of size [height, width, C>0]')
+
         # Convert to float scaled [0, 1].
         if image.dtype != tf.float32:
             image = tf.image.convert_image_dtype(image, dtype=tf.float32)
@@ -266,7 +252,6 @@ def preprocess_for_train(image, labels, bboxes,
 
         # Distort image and bounding boxes.
         dst_image = image
-        print('## dist_image: ', dst_image)
         dst_image, labels, bboxes, distort_bbox = \
             distorted_bounding_box_crop(image, labels, bboxes,
                                         min_object_covered=MIN_OBJECT_COVERED,
@@ -279,12 +264,12 @@ def preprocess_for_train(image, labels, bboxes,
 
         # Randomly flip the image horizontally.
         dst_image, bboxes = tf_image.random_flip_left_right(dst_image, bboxes)
+        tf_summary_image(dst_image, bboxes, 'image_flip_left_right')
 
         # Randomly distort the colors. There are 4 ways to do it.
-        dst_image = apply_with_random_selector(
-                dst_image,
-                lambda x, ordering: distort_color(x, ordering, fast_mode),
-                num_cases=4)
+        dst_image = apply_with_random_selector(dst_image,
+                                               lambda x, ordering: distort_color(x, ordering, fast_mode),
+                                               num_cases=4)
         tf_summary_image(dst_image, bboxes, 'image_color_distorted')
 
         # Rescale to VGG input scale.
