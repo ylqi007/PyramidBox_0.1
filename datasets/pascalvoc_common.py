@@ -18,6 +18,7 @@ import os
 import glob
 
 import tensorflow as tf
+from preprocessing import preprocessing_factory
 
 from datasets import dataset_utils
 
@@ -95,14 +96,29 @@ def get_dataset(split_name, dataset_dir, file_pattern, items_to_descriptions):
         image_features = {
             'image': _image_features['image/raw_data'],
             'shape': _image_features['image/shape'],
-            'object/bbox': [tf.sparse.to_dense(_image_features['image/object/bbox/ymin']),
-                            tf.sparse.to_dense(_image_features['image/object/bbox/xmin']),
-                            tf.sparse.to_dense(_image_features['image/object/bbox/ymax']),
-                            tf.sparse.to_dense(_image_features['image/object/bbox/ymax'])],
+            'object/bbox': tf.transpose([tf.sparse.to_dense(_image_features['image/object/bbox/ymin']),
+                                         tf.sparse.to_dense(_image_features['image/object/bbox/xmin']),
+                                         tf.sparse.to_dense(_image_features['image/object/bbox/ymax']),
+                                         tf.sparse.to_dense(_image_features['image/object/bbox/ymax'])]),
             'object/label': tf.sparse.to_dense(_image_features['image/object/bbox/label']),
         }
         return image_features
 
     parsed_image_dataset = m_dataset.map(_parse_feature_function)
 
-    return parsed_image_dataset
+    def _image_preprocessing_fn(_image_features):
+        image_preprocessing_fn = preprocessing_factory.get_preprocessing('ssd_300_vgg',
+                                                                         is_training=True)
+        image = _image_features['image']  # Tensor("IteratorGetNext:0", shape=(?, ?, ?), dtype=uint8, device=/device:CPU:0)
+        shape = _image_features['shape']  # Tensor("IteratorGetNext:3", shape=(3,), dtype=int64, device=/device:CPU:0)
+        glabels = _image_features['object/label']  # Tensor("IteratorGetNext:2", shape=(?,), dtype=int64, device=/device:CPU:0)
+        gbboxes = _image_features['object/bbox']
+
+        image, glabels, gbboxes = image_preprocessing_fn(image, glabels, gbboxes,
+                                                         out_shape=(300, 300),
+                                                         data_format='NCHW')
+        return image, shape, glabels, gbboxes
+
+    _dataset = parsed_image_dataset.map(_image_preprocessing_fn)
+
+    return _dataset
