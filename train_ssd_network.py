@@ -100,9 +100,30 @@ def main(_):
         ssd_anchors = ssd_net.anchors(ssd_shape)    # a list, each list contains 4 elements representing y, x, h, w
 
         # Select the preprocessing function.
-        preprocessing_name = FLAGS.preprocessing_name or FLAGS.model_name   # ssd_300_vgg <class 'str'>
-        image_preprocessing_fn = preprocessing_factory.get_preprocessing(preprocessing_name,
-                                                                         is_training=True)
+        def _image_preprocessing_fn(_image_features):
+            preprocessing_name = FLAGS.preprocessing_name or FLAGS.model_name  # ssd_300_vgg <class 'str'>
+            image_preprocessing_fn = preprocessing_factory.get_preprocessing(preprocessing_name,
+                                                                             is_training=True)
+            image = _image_features['image']  # Tensor("IteratorGetNext:0", shape=(?, ?, ?), dtype=uint8, device=/device:CPU:0)
+            shape = _image_features['shape']  # Tensor("IteratorGetNext:3", shape=(3,), dtype=int64, device=/device:CPU:0)
+            glabels = _image_features['object/label']  # Tensor("IteratorGetNext:2", shape=(?,), dtype=int64, device=/device:CPU:0)
+            gbboxes = _image_features['object/bbox']
+
+            image, glabels, gbboxes = image_preprocessing_fn(image, glabels, gbboxes,
+                                                             out_shape=(300, 300),
+                                                             data_format='NCHW')
+            return image, shape, glabels, gbboxes
+            # _image_features['image'] = image
+            # _image_features['shape'] = shape
+            # _image_features['object/label'] = glabels
+            # _image_features['object/bbox'] = gbboxes
+            # return _image_features
+
+        # Encode groundtruth labels and bboxes.
+        def _bboxes_encode_fn(*image_features):
+            _image, _shape, _glabels, _gbboxes = image_features
+            _gclasses, _glocalisations, _gscores = ssd_net.bboxes_encode(_glabels, _gbboxes, ssd_anchors)
+            return _image, _shape, _glabels, _gbboxes
 
         # =================================================================== #
         # Create a dataset provider and batches.
@@ -111,18 +132,18 @@ def main(_):
         dataset = dataset_factory.get_dataset('pascalvoc_2007', 'train', '/tmp/pascalvoc_tfrecord/')
         with tf.device('/cpu:0'):
             with tf.name_scope(FLAGS.dataset_name + '_dataset'):
-                dataset = dataset.shuffle(10)
+                dataset = dataset.map(_image_preprocessing_fn)
+                dataset = dataset.map(_bboxes_encode_fn)
+                dataset = dataset.batch(10)
 
             # Get for SSD network: image, labels, bboxes.
-            print("dataset:\n", dataset)
             iterator = tf.compat.v1.data.make_one_shot_iterator(dataset)
             image_example = iterator.get_next()
-            print('After image_preprocessing_fn:\n', image_example)
-            image, shape, glabels, gbboxes = image_example
+            image, gclasses, glocalisations, gscores = image_example
             print('image: ', image)
-            print('shape: ', shape)
-            print('glabels: ', glabels)
-            print('gbboxes: ', gbboxes)
+            print('shape: ', gclasses)
+            print('glabels: ', glocalisations)
+            print('gbboxes: ', gscores)
 
             # # Encode groundtruth labels and bboxes.
             # print("##############################################################")
@@ -170,7 +191,7 @@ def main(_):
                 # while True:
                 for _ in range(1):
                     # test = sess.run(b_gclasses)  # after sess, test is <class 'numpy.ndarray'>
-                    test = image_example
+                    test = gclasses
                     print(type(test), test.shape)
                     print("#!#", i, test)
                     i = i + 1

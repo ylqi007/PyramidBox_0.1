@@ -81,8 +81,7 @@ def get_dataset(split_name, dataset_dir, file_pattern, items_to_descriptions):
     """
     file_pattern = os.path.join(dataset_dir, file_pattern % split_name)
     files = glob.glob(file_pattern)
-
-    raw_image_dataset = tf.data.TFRecordDataset(files)
+    raw_image_dataset = tf.data.TFRecordDataset(files)  # <TFRecordDatasetV1 shapes: (), types: tf.string>
 
     def _parse_example_function(example_proto):
         image_features = tf.io.parse_single_example(example_proto, items_to_descriptions)
@@ -106,19 +105,4 @@ def get_dataset(split_name, dataset_dir, file_pattern, items_to_descriptions):
 
     parsed_image_dataset = m_dataset.map(_parse_feature_function)
 
-    def _image_preprocessing_fn(_image_features):
-        image_preprocessing_fn = preprocessing_factory.get_preprocessing('ssd_300_vgg',
-                                                                         is_training=True)
-        image = _image_features['image']  # Tensor("IteratorGetNext:0", shape=(?, ?, ?), dtype=uint8, device=/device:CPU:0)
-        shape = _image_features['shape']  # Tensor("IteratorGetNext:3", shape=(3,), dtype=int64, device=/device:CPU:0)
-        glabels = _image_features['object/label']  # Tensor("IteratorGetNext:2", shape=(?,), dtype=int64, device=/device:CPU:0)
-        gbboxes = _image_features['object/bbox']
-
-        image, glabels, gbboxes = image_preprocessing_fn(image, glabels, gbboxes,
-                                                         out_shape=(300, 300),
-                                                         data_format='NCHW')
-        return image, shape, glabels, gbboxes
-
-    _dataset = parsed_image_dataset.map(_image_preprocessing_fn)
-
-    return _dataset
+    return parsed_image_dataset
