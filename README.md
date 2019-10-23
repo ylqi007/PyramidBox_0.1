@@ -22,3 +22,8 @@ then parse each example proto to get parsed example.
 20191005: todo
 1. preprocessing images
 2. how to batch images
+
+20191010:
+- [x] `image_preprocessing_fn(image, glables, gbboxes, output_shape, data_format)`
+- [x] `ssd_net.bboxes_encode(glabels, gbboxes, ssd_anchors)`
+- [ ] `tf.train.batch()`
