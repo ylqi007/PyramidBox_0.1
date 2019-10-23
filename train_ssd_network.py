@@ -113,11 +113,6 @@ def main(_):
                                                              out_shape=(300, 300),
                                                              data_format='NCHW')
             return image, shape, glabels, gbboxes
-            # _image_features['image'] = image
-            # _image_features['shape'] = shape
-            # _image_features['object/label'] = glabels
-            # _image_features['object/bbox'] = gbboxes
-            # return _image_features
 
         # Encode groundtruth labels and bboxes.
         def _bboxes_encode_fn(*image_features):
@@ -134,7 +129,7 @@ def main(_):
             with tf.name_scope(FLAGS.dataset_name + '_dataset'):
                 dataset = dataset.map(_image_preprocessing_fn)
                 dataset = dataset.map(_bboxes_encode_fn)
-                dataset = dataset.batch(10)
+                dataset = dataset.batch(32)
 
             # Get for SSD network: image, labels, bboxes.
             iterator = tf.compat.v1.data.make_one_shot_iterator(dataset)
@@ -144,42 +139,6 @@ def main(_):
             print('shape: ', gclasses)
             print('glabels: ', glocalisations)
             print('gbboxes: ', gscores)
-
-            # # Encode groundtruth labels and bboxes.
-            # print("##############################################################")
-            # print("$$ Before encoding_fn glabels: ", glabels)   # shape=(?,), dtype=int64
-            # print("$$ Before encoding_fn gbboxes: ", gbboxes)   # shape=(?, 4), dtype=float32
-            # print("$$ Before encoding_fn ssd_anchors: ", type(ssd_anchors), len(ssd_anchors))
-            # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
-            # gclasses, glocalisations, gscores = ssd_net.bboxes_encode(glabels, gbboxes, ssd_anchors)
-            # batch_shape = [1] + [len(ssd_anchors)] * 3
-            # print("##############################################################")
-            # print("$$ After Encode groundtruth labels and bboxes -- gclasses: ", gclasses)  # list with len=6
-            # print("$$ After Encode groundtruth labels and bboxes -- glocalisations: ", glocalisations)  # list with len=6
-            # print("$$ After Encode groundtruth labels and bboxes -- gscores: ", gscores)    # list with len=6
-            # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
-            #
-            # # Training batches and queue.
-            # r1 = tf_utils.reshape_list([image, gclasses, glocalisations, gscores])
-            # print('# r1: ', r1)
-            # r = tf.train.batch(tf_utils.reshape_list([image, gclasses, glocalisations, gscores]),   # Flatten everything
-            #                    batch_size=FLAGS.batch_size,
-            #                    num_threads=FLAGS.num_preprocessing_threads,
-            #                    capacity=5 * FLAGS.batch_size)
-            # print("##############################################################")
-            # print("r: ", r)
-            # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
-            # b_image, b_gclasses, b_glocalisations, b_gscores = tf_utils.reshape_list(r, batch_shape)
-            # print('b_image', b_image)
-            # print('b_gclasses', b_gclasses)
-            # print('b_glocalisations', b_glocalisations)
-            # print('b_gscores', b_gscores)
-
-            # Intermediate queueing: unique batch computation pipeline for all
-            # GPUs running the training.
-            # batch_queue = slim.prefetch_queue.prefetch_queue(
-            #     tf_utils.reshape_list([b_image, b_gclasses, b_glocalisations, b_gscores]),
-            #     capacity=2 * deploy_config.num_clones)
 
         # =================================================================== #
         # Define the model running on every GPU.
