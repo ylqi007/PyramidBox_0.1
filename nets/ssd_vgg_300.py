@@ -48,6 +48,8 @@ import numpy as np
 import tensorflow as tf
 
 from nets import ssd_common
+from nets import custom_layers
+import tf_extended as tfe
 
 
 slim = tf.contrib.slim
@@ -583,10 +585,12 @@ def ssd_losses(logits, localisations,
         nmask = tf.logical_and(nmask, nvalues < max_hard_pred)
         fnmask = tf.cast(nmask, dtype)
 
+        batch_size = tf.cast(batch_size, dtype)
         # Add cross-entropy loss.
         with tf.name_scope('cross_entropy_pos'):
             loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits,
                                                                   labels=gclasses)
+            print('batch_size: ', batch_size, type(batch_size))
             loss = tf.div(tf.reduce_sum(loss * fpmask), batch_size, name='value')
             tf.losses.add_loss(loss)
 
