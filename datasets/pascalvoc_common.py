@@ -85,8 +85,7 @@ def get_dataset(split_name, dataset_dir, file_pattern, items_to_descriptions):
 
     def _parse_example_function(example_proto):
         image_features = tf.io.parse_single_example(example_proto, items_to_descriptions)
-        image_decode = tf.io.decode_jpeg(image_features['image/raw_data'])
-        image_features['image/raw_data'] = image_decode
+        image_features['image/raw_data'] = tf.io.decode_jpeg(image_features['image/raw_data'])
         return image_features
 
     m_dataset = raw_image_dataset.map(_parse_example_function)
