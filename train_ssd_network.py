@@ -241,7 +241,7 @@ def main(_):
         # =================================================================== #
         # Select dataset.
         dataset = dataset_factory.get_dataset('pascalvoc_2007', 'train', '/tmp/pascalvoc_tfrecord/')
-        with tf.device('/cpu:0'):
+        with tf.device(deploy_config.inputs_device()):
             with tf.name_scope(FLAGS.dataset_name + '_dataset'):
                 dataset = dataset.map(_image_preprocessing_fn)
                 dataset = dataset.map(lambda x: _bboxes_encode_fn(x, ssd_anchors))
@@ -255,13 +255,13 @@ def main(_):
             # print('\n##############################################################')
             # print('image_example: ', image_example, '\n')
             batch_shape = [1] + [len(ssd_anchors)] * 3
-            b_image, b_gclasses, b_glocalisations, b_gscores = tf_utils.reshape_list(batch_example, batch_shape)
-            # print('\n##############################################################')
-            print('$$$$$$$$ Data after tf.data.Dataset %%%%%%%%%%%%%%%%%')
-            print('b_image: ', b_image, '\n')       # Tensor("IteratorGetNext:0", shape=(?, 3, 300, 300), dtype=float32, device=/device:CPU:0)
-            print('b_gclasses: ', b_gclasses, '\n') # b_gclasses:  Tensor("IteratorGetNext:1", shape=(?, 3), dtype=int64, device=/device:CPU:0)
-            print('b_glocalisations: ', b_glocalisations, '\n')
-            print('b_gscores: ', b_gscores, '\n')
+            # b_image, b_gclasses, b_glocalisations, b_gscores = tf_utils.reshape_list(batch_example, batch_shape)
+            # # print('\n##############################################################')
+            # print('$$$$$$$$ Data after tf.data.Dataset %%%%%%%%%%%%%%%%%')
+            # print('b_image: ', b_image, '\n')       # Tensor("IteratorGetNext:0", shape=(?, 3, 300, 300), dtype=float32, device=/device:CPU:0)
+            # print('b_gclasses: ', b_gclasses, '\n') # b_gclasses:  Tensor("IteratorGetNext:1", shape=(?, 3), dtype=int64, device=/device:CPU:0)
+            # print('b_glocalisations: ', b_glocalisations, '\n')
+            # print('b_gscores: ', b_gscores, '\n')
 
         # =================================================================== #
         # Define the model running on every GPU.
@@ -301,12 +301,17 @@ def main(_):
         # # Gather initial summaries
         # summaries = set(tf.get_collection(tf.GraphKeys.SUMMARIES))
         #
-        # # =================================================================== #
-        # # Add summaries from first clone.
-        # # =================================================================== #
-        # clones = model_deploy.create_clones(deploy_config, clone_fn, [batch_example])
-        # first_clone_scope = deploy_config.clone_scope(0)
-        # print('first_clone_scope: ', first_clone_scope, '@@@')
+        # =================================================================== #
+        # Add summaries from first clone.
+        # =================================================================== #
+        clones = model_deploy.create_clones(deploy_config, clone_fn, [batch_example])
+        first_clone_scope = deploy_config.clone_scope(0)
+        print('clones: ', type(clones), clones, '@@@\n')
+        print('first_clone_scope: ', first_clone_scope, '@@@\n')
+        print(type(clones[0].outputs), clones[0].outputs['block1'], '\n')
+
+        for end_point in clones[0].outputs:
+            print(end_point)
         #
         # # Gather update_ops from the first clone. These contain, for example,
         # # the updates for the batch_norm variables created by network_fn.
@@ -322,16 +327,18 @@ def main(_):
         # # Add summaries for losses and extra losses.
         #
         # # Add summaries for variables.
-        #
-        # # =================================================================== #
-        # # Configure the moving averages.
-        # # =================================================================== #
-        # if FLAGS.moving_average_decay:
-        #     moving_average_variable = slim.get_model_variables()
-        #     variable_averages = tf.train.ExponentialMovingAverage(FLAGS.moving_average_decay, global_step)
-        # else:
-        #     moving_average_variable, variable_averages = None, None
-        #
+
+        # =================================================================== #
+        # Configure the moving averages.
+        # =================================================================== #
+        if FLAGS.moving_average_decay:
+            moving_average_variable = slim.get_model_variables()
+            variable_averages = tf.train.ExponentialMovingAverage(FLAGS.moving_average_decay, global_step)
+        else:
+            moving_average_variable, variable_averages = None, None
+
+        print(moving_average_variable)
+        print(variable_averages)
         # # =================================================================== #
         # # Configure the optimization procedure.
         # # =================================================================== #

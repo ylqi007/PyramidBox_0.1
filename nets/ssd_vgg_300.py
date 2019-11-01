@@ -46,6 +46,7 @@ from collections import namedtuple
 
 import numpy as np
 import tensorflow as tf
+from tensorflow import keras
 
 from nets import ssd_common
 from nets import custom_layers
@@ -426,7 +427,7 @@ def ssd_net(inputs,
 
     # End_points collect relevant activations for external use.
     end_points = {}
-    with tf.variable_scope(scope, 'ssd_300_vgg', [inputs], reuse=reuse):
+    with tf.compat.v1.variable_scope(scope, 'ssd_300_vgg', [inputs], reuse=reuse):
         # Original VGG-16 blocks.
         net = slim.repeat(inputs, 2, slim.conv2d, 64, [3, 3], scope='conv1')
         end_points['block1'] = net
@@ -460,24 +461,24 @@ def ssd_net(inputs,
 
         # Block 8/9/10/11: 1x1 and 3x3 convolutions stride 2 (except lasts).
         end_point = 'block8'
-        with tf.variable_scope(end_point):
+        with tf.compat.v1.variable_scope(end_point):
             net = slim.conv2d(net, 256, [1, 1], scope='conv1x1')
             net = custom_layers.pad2d(net, pad=(1, 1))
             net = slim.conv2d(net, 512, [3, 3], stride=2, scope='conv3x3', padding='VALID')
         end_points[end_point] = net
         end_point = 'block9'
-        with tf.variable_scope(end_point):
+        with tf.compat.v1.variable_scope(end_point):
             net = slim.conv2d(net, 128, [1, 1], scope='conv1x1')
             net = custom_layers.pad2d(net, pad=(1, 1))
             net = slim.conv2d(net, 256, [3, 3], stride=2, scope='conv3x3', padding='VALID')
         end_points[end_point] = net
         end_point = 'block10'
-        with tf.variable_scope(end_point):
+        with tf.compat.v1.variable_scope(end_point):
             net = slim.conv2d(net, 128, [1, 1], scope='conv1x1')
             net = slim.conv2d(net, 256, [3, 3], scope='conv3x3', padding='VALID')
         end_points[end_point] = net
         end_point = 'block11'
-        with tf.variable_scope(end_point):
+        with tf.compat.v1.variable_scope(end_point):
             net = slim.conv2d(net, 128, [1, 1], scope='conv1x1')
             net = slim.conv2d(net, 256, [3, 3], scope='conv3x3', padding='VALID')
         end_points[end_point] = net
@@ -487,7 +488,7 @@ def ssd_net(inputs,
         logits = []
         localisations = []
         for i, layer in enumerate(feat_layers):
-            with tf.variable_scope(layer + '_box'):
+            with tf.compat.v1.variable_scope(layer + '_box'):
                 p, l = ssd_multibox_layer(end_points[layer],
                                           num_classes,
                                           anchor_sizes[i],
@@ -498,6 +499,8 @@ def ssd_net(inputs,
             localisations.append(l)
 
         return predictions, localisations, logits, end_points
+
+
 ssd_net.default_image_size = 300
 
 
@@ -592,13 +595,13 @@ def ssd_losses(logits, localisations,
                                                                   labels=gclasses)
             print('batch_size: ', batch_size, type(batch_size))
             loss = tf.div(tf.reduce_sum(loss * fpmask), batch_size, name='value')
-            tf.losses.add_loss(loss)
+            tf.compat.v1.losses.add_loss(loss)
 
         with tf.name_scope('cross_entropy_neg'):
             loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits,
                                                                   labels=no_classes)
             loss = tf.div(tf.reduce_sum(loss * fnmask), batch_size, name='value')
-            tf.losses.add_loss(loss)
+            tf.compat.v1.losses.add_loss(loss)
 
         # Add localization loss: smooth L1, L2, ...
         with tf.name_scope('localization'):
@@ -606,4 +609,4 @@ def ssd_losses(logits, localisations,
             weights = tf.expand_dims(alpha * fpmask, axis=-1)
             loss = custom_layers.abs_smooth(localisations - glocalisations)
             loss = tf.div(tf.reduce_sum(loss * weights), batch_size, name='value')
-            tf.losses.add_loss(loss)
+            tf.compat.v1.losses.add_loss(loss)
