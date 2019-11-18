@@ -231,12 +231,12 @@ def get_init_fn(flags):
                                  flags.checkpoint_model_scope): var
              for var in variables_to_restore}
 
-
-    if tf.gfile.IsDirectory(flags.checkpoint_path):
+    if tf.io.gfile.isdir(flags.checkpoint_path):
         checkpoint_path = tf.train.latest_checkpoint(flags.checkpoint_path)
     else:
         checkpoint_path = flags.checkpoint_path
-    tf.logging.info('Fine-tuning from %s. Ignoring missing vars: %s' % (checkpoint_path, flags.ignore_missing_vars))
+    tf.compat.v1.logging.info('Fine-tuning from %s. Ignoring missing vars: %s' %
+                              (checkpoint_path, flags.ignore_missing_vars))
 
     return slim.assign_from_checkpoint_fn(
         checkpoint_path,
