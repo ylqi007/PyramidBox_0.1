@@ -27,3 +27,4 @@ then parse each example proto to get parsed example.
 - [x] `image_preprocessing_fn(image, glables, gbboxes, output_shape, data_format)`
 - [x] `ssd_net.bboxes_encode(glabels, gbboxes, ssd_anchors)`
 - [ ] `tf.train.batch()`
+- [ ] `display b_image and feature maps after conv layers`

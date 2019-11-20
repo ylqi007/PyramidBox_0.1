@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 
 
 DATASET_DIR="/tmp/pascalvoc_tfrecord/"
