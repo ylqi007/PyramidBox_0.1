@@ -1,5 +1,3 @@
-import tensorflow as tf
-from tensorflow.python.ops import control_flow_ops
 
 from datasets import dataset_factory
 from deployment import model_deploy
