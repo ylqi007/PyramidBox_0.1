@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 
-#VOC2007_TRAIN="../../DATA/VOC2007/train/"
-#VOC2007_TEST="../../DATA/VOC2007/test/"
-VOC2007_TRAIN="../VOC2007/train/"
-VOC2007_TEST="../VOC2007/test/"
+# In local
+VOC2007_TRAIN="../../DATA/VOC2007/train/"
+VOC2007_TEST="../../DATA/VOC2007/test/"
+
+# In docker
+#VOC2007_TRAIN="../VOC2007/train/"
+#VOC2007_TEST="../VOC2007/test/"
 
 DATA_OUTPUT="/tmp/pascalvoc_tfrecord/"
 

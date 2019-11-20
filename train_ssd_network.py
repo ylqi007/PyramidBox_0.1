@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tensorflow.python.ops import control_flow_ops
+import matplotlib.pyplot as plt
 
 from datasets import dataset_factory
 from deployment import model_deploy
@@ -9,7 +10,8 @@ import tf_utils
 
 slim = tf.contrib.slim
 
-DATA_FORMAT = 'NCHW'
+# DATA_FORMAT = 'NCHW'
+DATA_FORMAT = 'NHWC'
 
 # =========================================================================== #
 # SSD Network flags.
@@ -247,7 +249,7 @@ def main(_):
                 dataset = dataset.map(lambda x: _bboxes_encode_fn(x, ssd_anchors))
                 # print('\n##############################################################')
                 # print('dataset after _bboxes_encode_fn: ', dataset, '\n')
-                dataset = dataset.batch(32)
+                dataset = dataset.batch(2)
 
             # Get for SSD network: image, labels, bboxes.
             iterator = tf.compat.v1.data.make_one_shot_iterator(dataset)
@@ -255,7 +257,7 @@ def main(_):
             # print('\n##############################################################')
             # print('image_example: ', image_example, '\n')
             batch_shape = [1] + [len(ssd_anchors)] * 3
-            # b_image, b_gclasses, b_glocalisations, b_gscores = tf_utils.reshape_list(batch_example, batch_shape)
+            b_image, b_gclasses, b_glocalisations, b_gscores = tf_utils.reshape_list(batch_example, batch_shape)
             # # print('\n##############################################################')
             # print('$$$$$$$$ Data after tf.data.Dataset %%%%%%%%%%%%%%%%%')
             # print('b_image: ', b_image, '\n')       # Tensor("IteratorGetNext:0", shape=(?, 3, 300, 300), dtype=float32, device=/device:CPU:0)
@@ -266,156 +268,156 @@ def main(_):
         # =================================================================== #
         # Define the model running on every GPU.
         # =================================================================== #
-        def clone_fn(batch_example):
-            b_image, b_gclasses, b_glocalisations, b_gscores = tf_utils.reshape_list(batch_example, batch_shape)
+        # def clone_fn(batch_example):
+        #     b_image, b_gclasses, b_glocalisations, b_gscores = tf_utils.reshape_list(batch_example, batch_shape)
+        #
+        #     # Construct SSD network
+        #     arg_scope = ssd_net.arg_scope(weight_decay=FLAGS.weight_decay,
+        #                                   data_format=DATA_FORMAT)
+        #
+        #     with slim.arg_scope(arg_scope):
+        #         predictions, localisations, logits, end_points = ssd_net.net(b_image,
+        #                                                                      is_training=True)
+        #
+        #     # print('##################')
+        #     # print('predictions: ', predictions, '\n')
+        #     # print('localisations: ', localisations, '\n')
+        #     # print('logits: ', logits, '\n')
+        #     # print('end_points: ', end_points, '\n')
+        #     #
+        #     # print('$$$$$$$$$$$$$$$$$ ##################')
+        #     # print('logits: ', logits, '\n')
+        #     # print('localisations: ', localisations, '\n')
+        #     # print('b_gclasses: ', b_gclasses, '\n')
+        #     # print('b_glocalisations: ', b_glocalisations, '\n')
+        #     # print('b_gscores: ', b_gscores, '\n')
+        #
+        #     ssd_net.losses(logits, localisations,
+        #                    b_gclasses, b_glocalisations, b_gscores,
+        #                    match_threshold=FLAGS.match_threshold,
+        #                    negative_ratio=FLAGS.negative_ratio,
+        #                    alpha=FLAGS.loss_alpha,
+        #                    label_smoothing=FLAGS.label_smoothing)
+        #     return end_points
+        #
+        # # Gather initial summaries
+        # summaries = set(tf.get_collection(tf.GraphKeys.SUMMARIES))
+        #
+        # # =================================================================== #
+        # # Add summaries from first clone.
+        # # =================================================================== #
+        # clones = model_deploy.create_clones(deploy_config, clone_fn, [batch_example])
+        # first_clone_scope = deploy_config.clone_scope(0)
+        # print('clones: ', type(clones), clones, '@@@\n')
+        # print('first_clone_scope: ', first_clone_scope, '@@@\n')
+        # print(type(clones[0].outputs), clones[0].outputs['block1'], '\n')
+        #
+        # for end_point in clones[0].outputs:
+        #     print(end_point)
+        #
+        # # Gather update_ops from the first clone. These contain, for example,
+        # # the updates for the batch_norm variables created by network_fn.
+        # update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, first_clone_scope)
+        #
+        # # Add summaries for end_points.
+        # end_points = clones[0].outputs      # <class 'dict'>
+        # for end_point in end_points:
+        #     x = end_points[end_point]
+        #     summaries.add(tf.summary.histogram('activations/' + end_point, x))
+        #     summaries.add(tf.summary.scalar('sparsity/' + end_point, tf.nn.zero_fraction(x)))
+        #
+        # # Add summaries for losses and extra losses.
+        #
+        # # Add summaries for variables.
+        #
+        # # =================================================================== #
+        # # Configure the moving averages.
+        # # =================================================================== #
+        # if FLAGS.moving_average_decay:
+        #     moving_average_variable = slim.get_model_variables()
+        #     variable_averages = tf.train.ExponentialMovingAverage(FLAGS.moving_average_decay, global_step)
+        # else:
+        #     moving_average_variable, variable_averages = None, None
+        #
+        # print(moving_average_variable)
+        # print(variable_averages)
+        # # =================================================================== #
+        # # Configure the optimization procedure.
+        # # =================================================================== #
+        # with tf.device(deploy_config.optimizer_device()):
+        #     learning_rate = tf_utils.configure_learning_rate(FLAGS,
+        #                                                      10000,     # dataset.num_samples
+        #                                                      global_step)
+        #     optimizer = tf_utils.configure_optimizer(FLAGS, learning_rate)
+        #     summaries.add(tf.summary.scalar('learning_rate', learning_rate))
+        #
+        # print('# =================================================================== #')
+        # print('learning_rate: ', learning_rate)
+        # print('optimizer: ', optimizer)
+        # print('summaries: ', summaries)
+        #
+        # if FLAGS.moving_average_decay:
+        #     # Update ops executed locally by trainer
+        #     update_ops.append(variable_averages.apply(moving_average_variable))
+        # print('update ops: ', update_ops)
+        #
+        # # Variables to train.
+        # variables_to_train = tf_utils.get_variables_to_train(FLAGS)
+        # print('variables_to_train: ', variables_to_train)
+        #
+        # # and returns a train_tensor and summary_op
+        # total_loss, clones_gradients = model_deploy.optimize_clones(
+        #     clones,
+        #     optimizer,
+        #     var_list=variables_to_train)
+        # print('total_loss: ', total_loss)
+        # print('clones_gradients: ', clones_gradients)
+        #
+        # # Add total_loss to summary.
+        # summaries.add(tf.summary.scalar('total_loss', total_loss))
+        #
+        # # Create gradient updates.
+        # grad_updates = optimizer.apply_gradients(clones_gradients,
+        #                                          global_step=global_step)
+        # print('grad_updates: ', grad_updates)
+        # update_ops.append(grad_updates)
+        # update_op = tf.group(*update_ops)
+        # train_tensor = control_flow_ops.with_dependencies([update_op], total_loss, name='train_op')
+        # print('\ntrain_tensor: ', train_tensor)
+        # # Add the summaries from the first clone. These contain the summaries
+        # summaries |= set(tf.get_collection(tf.GraphKeys.SUMMARIES, first_clone_scope))
+        #
+        # # Merge all summaries together
+        # summary_op = tf.summary.merge(list(summaries), name='summary_op')
+        #
+        # # =================================================================== #
+        # # Kicks off the training.
+        # # =================================================================== #
+        # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=FLAGS.gpu_memory_fraction)
+        # config = tf.ConfigProto(log_device_placement=False,
+        #                         gpu_options=gpu_options)
+        # saver = tf.train.Saver(max_to_keep=5,
+        #                        keep_checkpoint_every_n_hours=1.0,
+        #                        write_version=2,
+        #                        pad_step_number=False)
+        # print('\ngpu_options: ', gpu_options)
+        # print('\nconfig: ', config)
+        # print('\nsaver: ', saver)
 
-            # Construct SSD network
-            arg_scope = ssd_net.arg_scope(weight_decay=FLAGS.weight_decay,
-                                          data_format=DATA_FORMAT)
-
-            with slim.arg_scope(arg_scope):
-                predictions, localisations, logits, end_points = ssd_net.net(b_image,
-                                                                             is_training=True)
-
-            # print('##################')
-            # print('predictions: ', predictions, '\n')
-            # print('localisations: ', localisations, '\n')
-            # print('logits: ', logits, '\n')
-            # print('end_points: ', end_points, '\n')
-            #
-            # print('$$$$$$$$$$$$$$$$$ ##################')
-            # print('logits: ', logits, '\n')
-            # print('localisations: ', localisations, '\n')
-            # print('b_gclasses: ', b_gclasses, '\n')
-            # print('b_glocalisations: ', b_glocalisations, '\n')
-            # print('b_gscores: ', b_gscores, '\n')
-
-            ssd_net.losses(logits, localisations,
-                           b_gclasses, b_glocalisations, b_gscores,
-                           match_threshold=FLAGS.match_threshold,
-                           negative_ratio=FLAGS.negative_ratio,
-                           alpha=FLAGS.loss_alpha,
-                           label_smoothing=FLAGS.label_smoothing)
-            return end_points
-
-        # Gather initial summaries
-        summaries = set(tf.get_collection(tf.GraphKeys.SUMMARIES))
-
-        # =================================================================== #
-        # Add summaries from first clone.
-        # =================================================================== #
-        clones = model_deploy.create_clones(deploy_config, clone_fn, [batch_example])
-        first_clone_scope = deploy_config.clone_scope(0)
-        print('clones: ', type(clones), clones, '@@@\n')
-        print('first_clone_scope: ', first_clone_scope, '@@@\n')
-        print(type(clones[0].outputs), clones[0].outputs['block1'], '\n')
-
-        for end_point in clones[0].outputs:
-            print(end_point)
-
-        # Gather update_ops from the first clone. These contain, for example,
-        # the updates for the batch_norm variables created by network_fn.
-        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, first_clone_scope)
-
-        # Add summaries for end_points.
-        end_points = clones[0].outputs      # <class 'dict'>
-        for end_point in end_points:
-            x = end_points[end_point]
-            summaries.add(tf.summary.histogram('activations/' + end_point, x))
-            summaries.add(tf.summary.scalar('sparsity/' + end_point, tf.nn.zero_fraction(x)))
-
-        # Add summaries for losses and extra losses.
-
-        # Add summaries for variables.
-
-        # =================================================================== #
-        # Configure the moving averages.
-        # =================================================================== #
-        if FLAGS.moving_average_decay:
-            moving_average_variable = slim.get_model_variables()
-            variable_averages = tf.train.ExponentialMovingAverage(FLAGS.moving_average_decay, global_step)
-        else:
-            moving_average_variable, variable_averages = None, None
-
-        print(moving_average_variable)
-        print(variable_averages)
-        # =================================================================== #
-        # Configure the optimization procedure.
-        # =================================================================== #
-        with tf.device(deploy_config.optimizer_device()):
-            learning_rate = tf_utils.configure_learning_rate(FLAGS,
-                                                             10000,     # dataset.num_samples
-                                                             global_step)
-            optimizer = tf_utils.configure_optimizer(FLAGS, learning_rate)
-            summaries.add(tf.summary.scalar('learning_rate', learning_rate))
-
-        print('# =================================================================== #')
-        print('learning_rate: ', learning_rate)
-        print('optimizer: ', optimizer)
-        print('summaries: ', summaries)
-
-        if FLAGS.moving_average_decay:
-            # Update ops executed locally by trainer
-            update_ops.append(variable_averages.apply(moving_average_variable))
-        print('update ops: ', update_ops)
-
-        # Variables to train.
-        variables_to_train = tf_utils.get_variables_to_train(FLAGS)
-        print('variables_to_train: ', variables_to_train)
-
-        # and returns a train_tensor and summary_op
-        total_loss, clones_gradients = model_deploy.optimize_clones(
-            clones,
-            optimizer,
-            var_list=variables_to_train)
-        print('total_loss: ', total_loss)
-        print('clones_gradients: ', clones_gradients)
-
-        # Add total_loss to summary.
-        summaries.add(tf.summary.scalar('total_loss', total_loss))
-
-        # Create gradient updates.
-        grad_updates = optimizer.apply_gradients(clones_gradients,
-                                                 global_step=global_step)
-        print('grad_updates: ', grad_updates)
-        update_ops.append(grad_updates)
-        update_op = tf.group(*update_ops)
-        train_tensor = control_flow_ops.with_dependencies([update_op], total_loss, name='train_op')
-        print('\ntrain_tensor: ', train_tensor)
-        # Add the summaries from the first clone. These contain the summaries
-        summaries |= set(tf.get_collection(tf.GraphKeys.SUMMARIES, first_clone_scope))
-
-        # Merge all summaries together
-        summary_op = tf.summary.merge(list(summaries), name='summary_op')
-
-        # =================================================================== #
-        # Kicks off the training.
-        # =================================================================== #
-        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=FLAGS.gpu_memory_fraction)
-        config = tf.ConfigProto(log_device_placement=False,
-                                gpu_options=gpu_options)
-        saver = tf.train.Saver(max_to_keep=5,
-                               keep_checkpoint_every_n_hours=1.0,
-                               write_version=2,
-                               pad_step_number=False)
-        print('\ngpu_options: ', gpu_options)
-        print('\nconfig: ', config)
-        print('\nsaver: ', saver)
-
-        slim.learning.train(
-            train_tensor,
-            logdir=FLAGS.train_dir,
-            master='',
-            is_chief=True,
-            init_fn=tf_utils.get_init_fn(FLAGS),
-            summary_op=summary_op,
-            number_of_steps=FLAGS.max_number_of_steps,
-            log_every_n_steps=FLAGS.log_every_n_steps,
-            save_summaries_secs=FLAGS.save_summaries_secs,
-            saver=saver,
-            save_interval_secs=FLAGS.save_interval_secs,
-            session_config=config,
-            sync_optimizer=None)
+        # slim.learning.train(
+        #     train_tensor,
+        #     logdir=FLAGS.train_dir,
+        #     master='',
+        #     is_chief=True,
+        #     init_fn=tf_utils.get_init_fn(FLAGS),
+        #     summary_op=summary_op,
+        #     number_of_steps=FLAGS.max_number_of_steps,
+        #     log_every_n_steps=FLAGS.log_every_n_steps,
+        #     save_summaries_secs=FLAGS.save_summaries_secs,
+        #     saver=saver,
+        #     save_interval_secs=FLAGS.save_interval_secs,
+        #     session_config=config,
+        #     sync_optimizer=None)
 
         # slim.learning.train(
         #     train_tensor,
@@ -443,6 +445,36 @@ def main(_):
         #             i = i + 1
         #     except tf.errors.OutOfRangeError:
         #         print("End! totally: ", i)
+        arg_scope = ssd_net.arg_scope(weight_decay=FLAGS.weight_decay,
+                                      data_format=DATA_FORMAT)
+        with slim.arg_scope(arg_scope):
+            # predictions, localisations, logits, end_points = ssd_net.net(b_image, is_training=True)
+            net, localisations, logits, end_points = ssd_net.net(b_image, is_training=True)
+
+        init = tf.global_variables_initializer()
+
+        with tf.compat.v1.Session() as sess:
+            sess.run(init)
+
+            print('#### b_image: ', b_image, type(b_image), b_image.shape, b_image.shape[0])
+            print('#### b_image[0]: ', b_image[0], type(b_image[0]), b_image[0].shape)
+
+            for i in range(2):
+                b_imagei = b_image[i].eval()
+                b_imagei = b_imagei.astype(int)
+                print(type(b_imagei), b_imagei.dtype, b_imagei.shape)
+                print(type(b_imagei), b_imagei.dtype, b_imagei.shape)
+                plt.imshow(b_imagei)
+                plt.show()
+
+            print("$$$$ net: ", net, type(net), net.shape, net)
+            print("$$$$ net[0]: ", net[0], type(net[0]), net[0].shape, net[0])
+            for j in range(2):
+                net0 = net[j].eval()
+                print(net0)
+                for k in range(8):
+                    plt.imshow(net0[:, :, k])
+                    plt.show()
 
 
 if __name__ == '__main__':
