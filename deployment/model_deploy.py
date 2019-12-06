@@ -1,54 +1,55 @@
-
+# Copyright 2016 The TensorFlow Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+"""Deploy Slim models across multiple clones and replicas.
 # TODO(sguada) docstring paragraph by (a) motivating the need for the file and
 # (b) defining clones.
-
 # TODO(sguada) describe the high-level components of model deployment.
 # E.g. "each model deployment is composed of several parts: a DeploymentConfig,
 # which captures A, B and C, an input_fn which loads data.. etc
-
 To easily train a model on multiple GPUs or across multiple machines this
 module provides a set of helper functions: `create_clones`,
 `optimize_clones` and `deploy`.
-
 Usage:
-
     g = tf.Graph()
-
     # Set up DeploymentConfig
     config = model_deploy.DeploymentConfig(num_clones=2, clone_on_cpu=True)
-
     # Create the global step on the device storing the variables.
     with tf.device(config.variables_device()):
         global_step = slim.create_global_step()
-
     # Define the inputs
     with tf.device(config.inputs_device()):
         images, labels = LoadData(...)
         inputs_queue = slim.data.prefetch_queue((images, labels))
-
     # Define the optimizer.
     with tf.device(config.optimizer_device()):
         optimizer = tf.train.MomentumOptimizer(FLAGS.learning_rate, FLAGS.momentum)
-
     # Define the model including the loss.
     def model_fn(inputs_queue):
         images, labels = inputs_queue.dequeue()
         predictions = CreateNetwork(images)
         slim.losses.log_loss(predictions, labels)
-
     model_dp = model_deploy.deploy(config, model_fn, [inputs_queue],
                                    optimizer=optimizer)
-
     # Run training.
     slim.learning.train(model_dp.train_op, my_log_dir,
                                             summary_op=model_dp.summary_op)
-
 The Clone namedtuple holds together the values associated with each call to
 model_fn:
     * outputs: The return values of the calls to `model_fn()`.
     * scope: The scope used to create the clone.
     * device: The device used to create the clone.
-
 DeployedModel namedtuple, holds together the values needed to train multiple
 clones:
     * train_op: An operation that run the optimizer training op and include
@@ -59,7 +60,6 @@ clones:
     * total_loss: A `Tensor` that contains the sum of all losses created by
         `model_fn` plus the regularization losses.
     * clones: List of `Clone` tuples returned by `create_clones()`.
-
 DeploymentConfig parameters:
     * num_clones: Number of model clones to deploy in each replica.
     * clone_on_cpu: True if clones should be placed on CPU.
@@ -69,15 +69,12 @@ DeploymentConfig parameters:
     * num_ps_tasks: Number of tasks for the `ps` job. 0 to not use replicas.
     * worker_job_name: A name for the worker job.
     * ps_job_name: A name for the parameter server job.
-
 TODO(sguada):
     - describe side effect to the graph.
     - what happens to summaries and update_ops.
     - which graph collections are altered.
     - write a tutorial on how to use this.
     - analyze the possibility of calling deploy more than once.
-
-
 """
 
 from __future__ import absolute_import
@@ -130,39 +127,31 @@ _deployment_params = {'num_clones': 1,
 
 def create_clones(config, model_fn, args=None, kwargs=None):
     """Creates multiple clones according to config using a `model_fn`.
-
     The returned values of `model_fn(*args, **kwargs)` are collected along with
     the scope and device used to created it in a namedtuple
     `Clone(outputs, scope, device)`
-
     Note: it is assumed that any loss created by `model_fn` is collected at
     the tf.GraphKeys.LOSSES collection.
-
     To recover the losses, summaries or update_ops created by the clone use:
     ```python
         losses = tf.get_collection(tf.GraphKeys.LOSSES, clone.scope)
         summaries = tf.get_collection(tf.GraphKeys.SUMMARIES, clone.scope)
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, clone.scope)
     ```
-
     The deployment options are specified by the config object and support
     deploying one or several clones on different GPUs and one or several replicas
     of such clones.
-
     The argument `model_fn` is called `config.num_clones` times to create the
     model clones as `model_fn(*args, **kwargs)`.
-
     If `config` specifies deployment on multiple replicas then the default
     tensorflow device is set appropriatly for each call to `model_fn` and for the
     slim variable creation functions: model and global variables will be created
     on the `ps` device, the clone operations will be on the `worker` device.
-
     Args:
         config: A DeploymentConfig object.
         model_fn: A callable. Called as `model_fn(*args, **kwargs)`
         args: Optional list of arguments to pass to `model_fn`.
         kwargs: Optional list of keyword arguments to pass to `model_fn`.
-
     Returns:
         A list of namedtuples `Clone`.
     """
@@ -176,8 +165,8 @@ def create_clones(config, model_fn, args=None, kwargs=None):
             with tf.name_scope(config.clone_scope(i)) as clone_scope:
                 clone_device = config.clone_device(i)
                 with tf.device(clone_device):
-                    with tf.compat.v1.variable_scope(tf.compat.v1.get_variable_scope(),
-                                                     reuse=True if i > 0 else None):
+                    with tf.variable_scope(tf.get_variable_scope(),
+                                           reuse=True if i > 0 else None):
                         outputs = model_fn(*args, **kwargs)
                     clones.append(Clone(outputs, clone_scope, clone_device))
     return clones
@@ -185,13 +174,11 @@ def create_clones(config, model_fn, args=None, kwargs=None):
 
 def _gather_clone_loss(clone, num_clones, regularization_losses):
     """Gather the loss for a single clone.
-
     Args:
         clone: A Clone namedtuple.
         num_clones: The number of clones being deployed.
         regularization_losses: Possibly empty list of regularization_losses
             to add to the clone losses.
-
     Returns:
         A tensor for the total loss for the clone.  Can be None.
     """
@@ -228,7 +215,6 @@ def _gather_clone_loss(clone, num_clones, regularization_losses):
 def _optimize_clone(optimizer, clone, num_clones, regularization_losses,
                                         **kwargs):
     """Compute losses and gradients for a single clone.
-
     Args:
         optimizer: A tf.Optimizer  object.
         clone: A Clone namedtuple.
@@ -236,7 +222,6 @@ def _optimize_clone(optimizer, clone, num_clones, regularization_losses,
         regularization_losses: Possibly empty list of regularization_losses
             to add to the clone losses.
         **kwargs: Dict of kwarg to pass to compute_gradients().
-
     Returns:
         A tuple (clone_loss, clone_grads_and_vars).
             - clone_loss: A tensor for the total loss for the clone.  Can be None.
@@ -255,9 +240,7 @@ def optimize_clones(clones, optimizer,
                     regularization_losses=None,
                     **kwargs):
     """Compute clone losses and gradients for the given list of `Clones`.
-
     Note: The regularization_losses are added to the first clone losses.
-
     Args:
       clones: List of `Clones` created by `create_clones()`.
       optimizer: An `Optimizer` object.
@@ -265,14 +248,12 @@ def optimize_clones(clones, optimizer,
          will gather them from tf.GraphKeys.REGULARIZATION_LOSSES. Pass `[]` to
          exclude them.
       **kwargs: Optional list of keyword arguments to pass to `compute_gradients`.
-
     Returns:
       A tuple (total_loss, grads_and_vars).
         - total_loss: A Tensor containing the average of the clone losses
             including the regularization loss.
         - grads_and_vars: A List of tuples (gradient, variable) containing the
             sum of the gradients for each variable.
-
     """
     grads_and_vars = []
     clones_losses = []
@@ -303,22 +284,17 @@ def deploy(config,
            optimizer=None,
            summarize_gradients=False):
     """Deploys a Slim-constructed model across multiple clones.
-
     The deployment options are specified by the config object and support
     deploying one or several clones on different GPUs and one or several replicas
     of such clones.
-
     The argument `model_fn` is called `config.num_clones` times to create the
     model clones as `model_fn(*args, **kwargs)`.
-
     The optional argument `optimizer` is an `Optimizer` object.  If not `None`,
     the deployed model is configured for training with that optimizer.
-
     If `config` specifies deployment on multiple replicas then the default
     tensorflow device is set appropriatly for each call to `model_fn` and for the
     slim variable creation functions: model and global variables will be created
     on the `ps` device, the clone operations will be on the `worker` device.
-
     Args:
       config: A `DeploymentConfig` object.
       model_fn: A callable. Called as `model_fn(*args, **kwargs)`
@@ -327,10 +303,8 @@ def deploy(config,
       optimizer: Optional `Optimizer` object.  If passed the model is deployed
           for training with that optimizer.
       summarize_gradients: Whether or not add summaries to the gradients.
-
     Returns:
       A `DeployedModel` namedtuple.
-
     """
     # Gather initial summaries.
     summaries = set(tf.get_collection(tf.GraphKeys.SUMMARIES))
@@ -402,14 +376,11 @@ def deploy(config,
 
 def _sum_clones_gradients(clone_grads):
     """Calculate the sum gradient for each shared variable across all clones.
-
     This function assumes that the clone_grads has been scaled appropriately by
     1 / num_clones.
-
     Args:
       clone_grads: A List of List of tuples (gradient, variable), one list per
         `Clone`.
-
     Returns:
       List of tuples of (gradient, variable) where the gradient has been summed
         across all clones.
@@ -435,12 +406,9 @@ def _sum_clones_gradients(clone_grads):
 
 def _add_gradients_summaries(grads_and_vars):
     """Add histogram summaries to gradients.
-
     Note: The summaries are also added to the SUMMARIES collection.
-
     Args:
         grads_and_vars: A list of gradient to variable pairs (tuples).
-
     Returns:
         The _list_ of the added summaries for grads_and_vars.
     """
@@ -462,7 +430,6 @@ def _add_gradients_summaries(grads_and_vars):
 
 class DeploymentConfig(object):
     """Configuration for deploying a model with `deploy()`.
-
     You can pass an instance of this class to `deploy()` to specify exactly
     how to deploy the model to build.  If you do not pass one, an instance built
     from the default deployment_hparams will be used.
@@ -478,22 +445,17 @@ class DeploymentConfig(object):
                  worker_job_name='worker',
                  ps_job_name='ps'):
         """Create a DeploymentConfig.
-
         The config describes how to deploy a model across multiple clones and
         replicas.  The model will be replicated `num_clones` times in each replica.
         If `clone_on_cpu` is True, each clone will placed on CPU.
-
         If `fake_multiple_gpus` is True, the model will only be replicated once on
         a single GPU. This trick enables larger batch sizes, necessary for training
         deep networks such as InceptionV3/V4, on a single GPU.
-
         If `num_replicas` is 1, the model is deployed via a single process.  In that
         case `worker_device`, `num_ps_tasks`, and `ps_device` are ignored.
-
         If `num_replicas` is greater than 1, then `worker_device` and `ps_device`
         must specify TensorFlow devices for the `worker` and `ps` jobs and
         `num_ps_tasks` must be positive.
-
         Args:
           num_clones: Number of model clones to deploy in each replica.
           clone_on_cpu: If True clones would be placed on CPU.
@@ -503,7 +465,6 @@ class DeploymentConfig(object):
           num_ps_tasks: Number of tasks for the `ps` job. 0 to not use replicas.
           worker_job_name: A name for the worker job.
           ps_job_name: A name for the parameter server job.
-
         Raises:
             ValueError: If the arguments are invalid.
         """
@@ -560,9 +521,7 @@ class DeploymentConfig(object):
 
     def caching_device(self):
         """Returns the device to use for caching variables.
-
         Variables are cached on the worker CPU when using replicas.
-
         Returns:
             A device string or None if the variables do not need to be cached.
         """
@@ -573,13 +532,10 @@ class DeploymentConfig(object):
 
     def clone_device(self, clone_index):
         """Device used to create the clone and all the ops inside the clone.
-
         Args:
             clone_index: Int, representing the clone_index.
-
         Returns:
             A value suitable for `tf.device()`.
-
         Raises:
             ValueError: if `clone_index` is greater or equal to the number of clones".
         """
@@ -597,13 +553,10 @@ class DeploymentConfig(object):
 
     def clone_scope(self, clone_index):
         """Name scope to create the clone.
-
         Args:
             clone_index: Int, representing the clone_index.
-
         Returns:
             A name_scope suitable for `tf.name_scope()`.
-
         Raises:
             ValueError: if `clone_index` is greater or equal to the number of clones".
         """
@@ -616,7 +569,6 @@ class DeploymentConfig(object):
 
     def optimizer_device(self):
         """Device to use with the optimizer.
-
         Returns:
             A value suitable for `tf.device()`.
         """
@@ -627,7 +579,6 @@ class DeploymentConfig(object):
 
     def inputs_device(self):
         """Device to use to build the inputs.
-
         Returns:
             A value suitable for `tf.device()`.
         """
@@ -639,7 +590,6 @@ class DeploymentConfig(object):
 
     def variables_device(self):
         """Returns the device to use for variables created inside the clone.
-
         Returns:
             A value suitable for `tf.device()`.
         """
